@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="CakePHP" default="build">
+ <target name="build" depends="prepare,lint,phploc,pdepend,phpcpd,phpcs-ci,phpmd-ci,testsuite"/>
+
+ <target name="build-parallel" depends="prepare,lint,tools-parallel,testsuite"/>
+
+ <target name="tools-parallel" description="Run tools in parallel">
+  <parallel threadCount="2">
+   <sequential>
+    <antcall target="pdepend"/>
+    <antcall target="phpmd-ci"/>
+   </sequential>
+   <antcall target="phpcpd"/>
+   <antcall target="phpcs-ci"/>
+   <antcall target="phploc"/>
+  </parallel>
+ </target>
+
+ <target name="clean" description="Cleanup build artifacts">
+  <delete dir="${basedir}/build/coverage"/>
+  <delete dir="${basedir}/build/logs"/>
+  <delete dir="${basedir}/build/pdepend"/>
+  <delete dir="${basedir}/build/pdepend"/>
+  <delete dir="${basedir}/app/tmp"/>
+ </target>
+
+ <target name="prepare" depends="clean" description="Prepare for build">
+  <mkdir dir="${basedir}/build/coverage"/>
+  <mkdir dir="${basedir}/build/logs"/>
+  <mkdir dir="${basedir}/build/pdepend"/>
+  <mkdir dir="${basedir}/app/tmp"/>
+  <mkdir dir="${basedir}/app/tmp/cache"/>
+  <mkdir dir="${basedir}/app/tmp/cache/models"/>
+  <mkdir dir="${basedir}/app/tmp/cache/persistent"/>
+  <mkdir dir="${basedir}/app/tmp/cache/views"/>
+  <mkdir dir="${basedir}/app/tmp/logs"/>
+  <mkdir dir="${basedir}/app/tmp/sessions"/>
+  <exec executable="mysql" failonerror="true">
+   <arg value="-u" />
+   <arg value="dotti" />
+   <arg value="-psenha" />
+   <arg value="-e DROP DATABASE IF EXISTS jenkins_test; CREATE DATABASE jenkins_test;" />
+  </exec>
+ </target>
+
+ <target name="lint">
+  <apply executable="php" failonerror="true">
+   <arg value="-l" />
+   <fileset dir="${basedir}/lib">
+    <include name="**/*.php" />
+    <modified />
+   </fileset>
+  </apply>
+ </target>
+
+ <target name="phploc" description="Measure project size using PHPLOC">
+  <exec executable="phploc" failonerror="false">
+   <arg value="--log-csv" />
+   <arg value="${basedir}/build/logs/phploc.csv" />
+   <arg path="${basedir}/lib" />
+  </exec>
+ </target>
+
+ <target name="pdepend" description="Calculate software metrics using PHP_Depend">
+  <exec executable="pdepend" failonerror="false">
+   <arg value="--jdepend-xml=${basedir}/build/logs/jdepend.xml" />
+   <arg value="--jdepend-chart=${basedir}/build/pdepend/dependencies.svg" />
+   <arg value="--overview-pyramid=${basedir}/build/pdepend/overview-pyramid.svg" />
+   <arg path="${basedir}/lib" />
+  </exec>
+ </target>
+
+ <target name="phpmd" description="Perform project mess detection using PHPMD and print human readable output. Intended for usage on the command line before committing.">
+  <exec executable="phpmd" failonerror="false">
+   <arg path="${basedir}/lib" />
+   <arg value="text" />
+   <arg value="${basedir}/build/phpmd.xml" />
+  </exec>
+ </target>
+
+ <target name="phpmd-ci" description="Perform project mess detection using PHPMD creating a log file for the continuous integration server">
+  <exec executable="phpmd" failonerror="false">
+   <arg path="${basedir}/lib" />
+   <arg value="xml" />
+   <arg value="codesize,design,naming,unusedcode" />
+   <arg value="--reportfile" />
+   <arg value="${basedir}/build/logs/pmd.xml" />
+  </exec>
+ </target>
+
+ <target name="phpcs" description="Find coding standard violations using PHP_CodeSniffer and print human readable output. Intended for usage on the command line before committing.">
+  <exec executable="phpcs" failonerror="false">
+   <arg value="--standard=${basedir}/build/phpcs.xml" />
+   <arg path="${basedir}/lib" />
+  </exec>
+ </target>
+
+ <target name="phpcs-ci" description="Find coding standard violations using PHP_CodeSniffer creating a log file for the continuous integration server">
+  <exec executable="phpcs" output="/dev/null" failonerror="false">
+   <arg value="--report=checkstyle" />
+   <arg value="--report-file=${basedir}/build/logs/checkstyle.xml" />
+   <arg value="--standard=${basedir}/build/phpcs.xml" />
+   <arg path="${basedir}/lib" />
+  </exec>
+ </target>
+
+ <target name="phpcpd" description="Find duplicate code using PHPCPD">
+  <exec executable="phpcpd" failonerror="false">
+   <arg value="--log-pmd" />
+   <arg value="${basedir}/build/logs/pmd-cpd.xml" />
+   <arg path="${basedir}/lib" />
+  </exec>
+ </target>
+
+ <target name="testsuite" description="Run unit tests with CakeTestSuite and PHPUnit">
+  <property name="executable-full-path" location="lib/Cake/Console/cake"/>
+  <exec executable="${executable-full-path}" failonerror="true" searchpath="false">
+    <arg line="testsuite core AllTests -app ${basedir}/app --stderr --log-junit build/logs/junit.xml --coverage-clover build/logs/clover.xml" />
+  </exec>
+ </target>
+</project>

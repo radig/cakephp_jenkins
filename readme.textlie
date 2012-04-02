@@ -1,0 +1,8 @@
+h1. CakePHP + Jenkins
+
+Esse projeto visa disponibilizar um exemplo funcional de configuração do Jenkins:http://jenkins-ci.org como ferramenta de Integração Contínua (CI) para aplicações
+baseadas no CakePHP.
+
+h2. Recursos
+
+* "Jenkins PHP":http://jenkins-php.org/
